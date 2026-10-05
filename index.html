@@ -270,30 +270,9 @@ async function onScanSuccess(decodedText) {
 
         method: "POST",
 
-        headers: {
-          "Content-Type":
-          "text/plain;charset=utf-8"
-        },
+        htry {
 
-        body: JSON.stringify({
-
-          action: "scan",
-
-          serial: serial
-
-        }),
-
-        redirect: "follow"
-
-      }
-
-    );
-
-
-    const data =
-      await response.json();
-
-
+    const data = await sendScan(serial);
     if (data.ok) {
 
       const operation =
@@ -301,7 +280,78 @@ async function onScanSuccess(decodedText) {
         ? "🟢 دخول"
         : "🔴 خروج";
 
+function sendScan(serial) {
 
+  return new Promise(function(resolve, reject) {
+
+    const callbackName =
+      "qrCallback_" + Date.now();
+
+    const script =
+      document.createElement("script");
+
+    const timer = setTimeout(function() {
+
+      cleanup();
+
+      reject(
+        new Error("انتهت مهلة الاتصال")
+      );
+
+    }, 15000);
+
+
+    function cleanup() {
+
+      clearTimeout(timer);
+
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+
+      try {
+        delete window[callbackName];
+      } catch (e) {}
+
+    }
+
+
+    window[callbackName] = function(data) {
+
+      cleanup();
+
+      resolve(data);
+
+    };
+
+
+    script.onerror = function() {
+
+      cleanup();
+
+      reject(
+        new Error("تعذر الاتصال بالسجل المركزي")
+      );
+
+    };
+
+
+    script.src =
+      API_URL +
+      "?action=scan" +
+      "&serial=" +
+      encodeURIComponent(serial) +
+      "&callback=" +
+      encodeURIComponent(callbackName) +
+      "&t=" +
+      Date.now();
+
+
+    document.body.appendChild(script);
+
+  });
+
+}
       showMessage(
 
         "<b>" +
