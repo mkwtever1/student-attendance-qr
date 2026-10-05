@@ -133,12 +133,27 @@ let processing = false;
 
 let lastCode = "";
 let lastAt = 0;
+let audioCtx = null;
 
+function enableAudio() {
+  try {
+    const AudioContext =
+      window.AudioContext || window.webkitAudioContext;
+
+    if (!audioCtx) {
+      audioCtx = new AudioContext();
+    }
+
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+  } catch (e) {}
+}
 
 /* تشغيل الكاميرا */
 
 async function startCamera() {
-
+enableAudio();
   if (cameraRunning) return;
 
   try {
@@ -248,27 +263,40 @@ lastAt = now;
         ? "🟢 دخول"
         : "🔴 خروج";
 playScanSound(data.action);
-      function playScanSound(action) {
+    function playScanSound(action) {
 
   try {
 
-    const AudioContext =
-      window.AudioContext || window.webkitAudioContext;
-
-    const ctx = new AudioContext();
-
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-
-    if (action === "دخول") {
-      oscillator.frequency.value = 880;
-    } else {
-      oscillator.frequency.value = 440;
+    if (!audioCtx) {
+      enableAudio();
     }
 
+    const oscillator = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    oscillator.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (action === "دخول") {
+      oscillator.frequency.value = 1000;
+    } else {
+      oscillator.frequency.value = 450;
+    }
+
+    gain.gain.setValueAtTime(
+      0.4,
+      audioCtx.currentTime
+    );
+
+    oscillator.start();
+
+    oscillator.stop(
+      audioCtx.currentTime + 0.25
+    );
+
+  } catch (e) {}
+
+}
     gain.gain.value = 0.15;
 
     oscillator.start();
