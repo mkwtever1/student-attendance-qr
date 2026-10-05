@@ -220,11 +220,14 @@ async function onScanSuccess(decodedText) {
   if (processing) return;
 
   if (
-    serial === lastCode &&
-    now - lastAt < 5000
-  ) {
-    return;
-  }
+  serial === lastCode &&
+  now - lastAt < 3000
+) {
+  return;
+}
+
+lastCode = serial;
+lastAt = now;
 
   lastCode = serial;
   lastAt = now;
