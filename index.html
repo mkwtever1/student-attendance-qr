@@ -247,7 +247,40 @@ lastAt = now;
         data.action === "دخول"
         ? "🟢 دخول"
         : "🔴 خروج";
+playScanSound(data.action);
+      function playScanSound(action) {
 
+  try {
+
+    const AudioContext =
+      window.AudioContext || window.webkitAudioContext;
+
+    const ctx = new AudioContext();
+
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (action === "دخول") {
+      oscillator.frequency.value = 880;
+    } else {
+      oscillator.frequency.value = 440;
+    }
+
+    gain.gain.value = 0.15;
+
+    oscillator.start();
+
+    setTimeout(function() {
+      oscillator.stop();
+      ctx.close();
+    }, 180);
+
+  } catch (e) {}
+
+}
       showMessage(
 
         "<b>" + operation + "</b><br><br>" +
