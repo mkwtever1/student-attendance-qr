@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>نظام حضور الطالبات QR</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body {
+  font-family: Arial, Tahoma, sans-serif;
+  background: #f4f6f9;
+  margin: 0;
+  color: #222;
+}
+
+.header {
+  background: #2563eb;
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.container {
+  max-width: 700px;
+  margin: auto;
+  padding: 18px;
+}
+
+.card {
+  background: white;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 3px 12px rgba(0,0,0,.12);
+}
+
+#reader {
+  width: 100%;
+  max-width: 520px;
+  margin: auto;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 13px 20px;
+  font-size: 16px;
+  margin: 5px;
+  cursor: pointer;
+}
+
+.start {
+  background: #2563eb;
+  color: white;
+}
+
+.stop {
+  background: #e5e7eb;
+  color: #222;
+}
+
+.msg {
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 15px;
+  text-align: center;
+  line-height: 1.7;
+}
+
+.waiting {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <h1>📱 نظام حضور الطالبات</h1>
+  <div>مسح QR وتسجيل الدخول والخروج تلقائيًا</div>
+</div>
+
+<div class="container">
+
+  <div class="card">
+
+    <h2>📷 مسح رمز QR</h2>
+
+    <div id="reader"></div>
+
+    <div id="result">
+      <div class="msg waiting">
+        اضغطي «تشغيل الكاميرا» لبدء المسح
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:15px;">
+
+      <button class="start" onclick="startCamera()">
+        📷 تشغيل الكاميرا
+      </button>
+
+      <button class="stop" onclick="stopCamera()">
+        ⛔ إيقاف الكاميرا
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+const API_URL =
+"https://script.google.com/macros/s/AKfycbyoPEJbYL5tStFFafIRvcYutjX_tdFB9U14hQGRYiB2zp5CB1e2EkZBpi1CYVym764bIw/exec";
+
+let scanner = null;
+let cameraRunning = false;
+let processing = false;
+
+let lastCode = "";
+let lastAt = 0;
+
+
+/* تشغيل الكاميرا */
+
+async function startCamera() {
+
+  if (cameraRunning) return;
+
+  try {
+
+    scanner = new Html5Qrcode("reader");
+
+    await scanner.start(
+
+      {
+        facingMode: "environment"
+      },
+
+      {
+        fps: 10,
+
+        qrbox: {
+          width: 250,
+          height: 250
+        }
+      },
+
+      onScanSuccess,
+
+      function() {}
+
+    );
+
+    cameraRunning = true;
+
+    showMessage(
+      "📷 الكاميرا تعمل — وجهي QR داخل المربع.",
+      "waiting"
+    );
+
+  }
+
+  catch (error) {
+
+    showMessage(
+      "❌ تعذر فتح الكاميرا: " + escapeHtml(error),
+      "error"
+    );
+
+  }
+
+}
+
+
+/* إيقاف الكاميرا */
+
+async function stopCamera() {
+
+  if (scanner && cameraRunning) {
+
+    try {
+
+      await scanner.stop();
+
+    } catch (error) {}
+
+  }
+
+  cameraRunning = false;
+
+}
+
+
+/* استخراج الرقم من QR */
+
+function extractSerial(text) {
+
+  let value = String(text || "").trim();
+
+  let match = value.match(
+    /الرقم التسلسلي\s*[:：]\s*([0-9]+)/i
+  );
+
+  if (match) {
+    return match[1];
+  }
+
+  return value;
+
+}
+
+
+/* عند قراءة QR */
+
+async function onScanSuccess(decodedText) {
+
+  const serial = extractSerial(decodedText);
+
+  const now = Date.now();
+
+
+  /* منع تكرار نفس QR بسرعة */
+
+  if (processing) return;
+
+  if (
+    serial === lastCode &&
+    now - lastAt < 5000
+  ) {
+    return;
+  }
+
+
+  lastCode = serial;
+  lastAt = now;
+
+  processing = true;
+
+
+  showMessage(
+    "⏳ جاري تسجيل العملية...",
+    "waiting"
+  );
+
+
+  try {
+
+    const response = await fetch(
+
+      API_URL,
+
+      {
+
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+          "text/plain;charset=utf-8"
+        },
+
+        body: JSON.stringify({
+
+          action: "scan",
+
+          serial: serial
+
+        }),
+
+        redirect: "follow"
+
+      }
+
+    );
+
+
+    const data =
+      await response.json();
+
+
+    if (data.ok) {
+
+      const operation =
+        data.action === "دخول"
+        ? "🟢 دخول"
+        : "🔴 خروج";
+
+
+      showMessage(
+
+        "<b>" +
+        operation +
+        "</b><br><br>" +
+
+        "👩‍🎓 " +
+        escapeHtml(data.student.name) +
+        "<br>" +
+
+        "🔢 الرقم: " +
+        escapeHtml(data.student.serial) +
+        "<br>" +
+
+        "🚌 الرحلة: " +
+        escapeHtml(data.student.trip) +
+        "<br>" +
+
+        "📅 التاريخ: " +
+        escapeHtml(data.date) +
+        "<br>" +
+
+        "🕐 الوقت: " +
+        escapeHtml(data.time),
+
+        "success"
+
+      );
+
+    }
+
+    else {
+
+      showMessage(
+        "❌ " +
+        escapeHtml(
+          data.message ||
+          "تعذر تسجيل العملية"
+        ),
+        "error"
+      );
+
+    }
+
+  }
+
+  catch (error) {
+
+    showMessage(
+      "❌ تعذر الاتصال بالسجل المركزي: " +
+      escapeHtml(error),
+      "error"
+    );
+
+  }
+
+  finally {
+
+    setTimeout(function() {
+
+      processing = false;
+
+    }, 1200);
+
+  }
+
+}
+
+
+/* عرض الرسائل */
+
+function showMessage(message, type) {
+
+  document.getElementById("result").innerHTML =
+
+    '<div class="msg ' +
+    type +
+    '">' +
+    message +
+    '</div>';
+
+}
+
+
+/* حماية النصوص */
+
+function escapeHtml(value) {
+
+  return String(value ?? "")
+
+    .replace(
+
+      /[&<>"']/g,
+
+      function(character) {
+
+        return {
+
+          "&": "&amp;",
+
+          "<": "&lt;",
+
+          ">": "&gt;",
+
+          '"': "&quot;",
+
+          "'": "&#039;"
+
+        }[character];
+
+      }
+
+    );
+
+}
+
+</script>
+
+</body>
+</html>
