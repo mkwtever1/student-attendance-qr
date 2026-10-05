@@ -121,7 +121,6 @@ button {
   </div>
 </div>
 
-
 <script>
 
 const API_URL =
@@ -130,7 +129,6 @@ const API_URL =
 let scanner = null;
 let cameraRunning = false;
 let processing = false;
-
 let lastCode = "";
 let lastAt = 0;
 
@@ -168,7 +166,8 @@ async function startCamera() {
   } catch (error) {
 
     showMessage(
-      "❌ تعذر فتح الكاميرا: " + escapeHtml(error),
+      "❌ تعذر فتح الكاميرا: " +
+      escapeHtml(error),
       "error"
     );
 
@@ -196,9 +195,10 @@ async function stopCamera() {
 
 function extractSerial(text) {
 
-  let value = String(text || "").trim();
+  const value =
+    String(text || "").trim();
 
-  let match = value.match(
+  const match = value.match(
     /الرقم التسلسلي\s*[:：]\s*([0-9]+)/i
   );
 
@@ -210,26 +210,26 @@ function extractSerial(text) {
 }
 
 
-/* عند قراءة QR */
+/* قراءة QR */
 
 async function onScanSuccess(decodedText) {
 
-  const serial = extractSerial(decodedText);
+  const serial =
+    extractSerial(decodedText);
+
   const now = Date.now();
 
   if (processing) return;
 
   if (
-  serial === lastCode &&
-  now - lastAt < 3000
-) {
-  return;
-}
+    serial === lastCode &&
+    now - lastAt < 3000
+  ) {
+    return;
+  }
 
-lastCode = serial;
-lastAt = now;
-
-  
+  lastCode = serial;
+  lastAt = now;
   processing = true;
 
   showMessage(
@@ -239,7 +239,8 @@ lastAt = now;
 
   try {
 
-    const data = await sendScan(serial);
+    const data =
+      await sendScan(serial);
 
     if (data.ok) {
 
@@ -250,7 +251,9 @@ lastAt = now;
 
       showMessage(
 
-        "<b>" + operation + "</b><br><br>" +
+        "<b>" +
+        operation +
+        "</b><br><br>" +
 
         "👩‍🎓 " +
         escapeHtml(data.student.name) +
@@ -290,107 +293,127 @@ lastAt = now;
 
     showMessage(
       "❌ تعذر الاتصال بالسجل المركزي: " +
-      escapeHtml(error.message || error),
+      escapeHtml(
+        error.message || error
+      ),
       "error"
     );
 
   } finally {
 
-   setTimeout(function() {
-  processing = false;
-  lastCode = "";
-}, 3000);
+    setTimeout(function() {
+      processing = false;
+      lastCode = "";
+    }, 3000);
 
   }
 }
 
 
-/* إرسال المسح إلى Apps Script */
+/* الاتصال بالسجل المركزي */
 
 function sendScan(serial) {
 
-  return new Promise(function(resolve, reject) {
+  return new Promise(
+    function(resolve, reject) {
 
-    const callbackName =
-      "qrCallback_" + Date.now();
+      const callbackName =
+        "qrCallback_" +
+        Date.now() +
+        "_" +
+        Math.floor(Math.random() * 100000);
 
-    const script =
-      document.createElement("script");
+      const script =
+        document.createElement("script");
 
-    const timer = setTimeout(function() {
+      const timer =
+        setTimeout(function() {
 
-      cleanup();
+          cleanup();
 
-      reject(
-        new Error("انتهت مهلة الاتصال")
-      );
+          reject(
+            new Error(
+              "انتهت مهلة الاتصال"
+            )
+          );
 
-    }, 15000);
+        }, 15000);
 
 
-    function cleanup() {
+      function cleanup() {
 
-      clearTimeout(timer);
+        clearTimeout(timer);
 
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
+        if (script.parentNode) {
+          script.parentNode.removeChild(
+            script
+          );
+        }
+
+        try {
+          delete window[callbackName];
+        } catch (e) {}
+
       }
 
-      try {
-        delete window[callbackName];
-      } catch (e) {}
+
+      window[callbackName] =
+        function(data) {
+
+          cleanup();
+          resolve(data);
+
+        };
+
+
+      script.onerror =
+        function() {
+
+          cleanup();
+
+          reject(
+            new Error(
+              "تعذر الاتصال بالسجل المركزي"
+            )
+          );
+
+        };
+
+
+      script.src =
+        API_URL +
+        "?action=scan" +
+        "&serial=" +
+        encodeURIComponent(serial) +
+        "&callback=" +
+        encodeURIComponent(callbackName) +
+        "&t=" +
+        Date.now();
+
+
+      document.body.appendChild(script);
 
     }
-
-
-    window[callbackName] = function(data) {
-
-      cleanup();
-      resolve(data);
-
-    };
-
-
-    script.onerror = function() {
-
-      cleanup();
-
-      reject(
-        new Error("تعذر الاتصال بالسجل المركزي")
-      );
-
-    };
-
-
-    script.src =
-      API_URL +
-      "?action=scan" +
-      "&serial=" +
-      encodeURIComponent(serial) +
-      "&callback=" +
-      encodeURIComponent(callbackName) +
-      "&t=" +
-      Date.now();
-
-
-    document.body.appendChild(script);
-
-  });
+  );
 }
 
 
 /* عرض الرسائل */
 
-function showMessage(message, type) {
+function showMessage(
+  message,
+  type
+) {
 
-  document.getElementById("result").innerHTML =
+  document
+    .getElementById("result")
+    .innerHTML =
 
     '<div class="msg ' +
     type +
     '">' +
     message +
     '</div>';
-
 }
 
 
