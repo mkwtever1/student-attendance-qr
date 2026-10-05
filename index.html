@@ -66,7 +66,7 @@ button {
   border-radius: 10px;
   margin-top: 15px;
   text-align: center;
-  line-height: 1.7;
+  line-height: 1.8;
 }
 
 .waiting {
@@ -94,7 +94,6 @@ button {
 </div>
 
 <div class="container">
-
   <div class="card">
 
     <h2>📷 مسح رمز QR</h2>
@@ -120,7 +119,6 @@ button {
     </div>
 
   </div>
-
 </div>
 
 
@@ -148,24 +146,16 @@ async function startCamera() {
     scanner = new Html5Qrcode("reader");
 
     await scanner.start(
-
-      {
-        facingMode: "environment"
-      },
-
+      { facingMode: "environment" },
       {
         fps: 10,
-
         qrbox: {
           width: 250,
           height: 250
         }
       },
-
       onScanSuccess,
-
       function() {}
-
     );
 
     cameraRunning = true;
@@ -175,9 +165,7 @@ async function startCamera() {
       "waiting"
     );
 
-  }
-
-  catch (error) {
+  } catch (error) {
 
     showMessage(
       "❌ تعذر فتح الكاميرا: " + escapeHtml(error),
@@ -185,7 +173,6 @@ async function startCamera() {
     );
 
   }
-
 }
 
 
@@ -196,15 +183,12 @@ async function stopCamera() {
   if (scanner && cameraRunning) {
 
     try {
-
       await scanner.stop();
-
     } catch (error) {}
 
   }
 
   cameraRunning = false;
-
 }
 
 
@@ -223,7 +207,6 @@ function extractSerial(text) {
   }
 
   return value;
-
 }
 
 
@@ -232,11 +215,7 @@ function extractSerial(text) {
 async function onScanSuccess(decodedText) {
 
   const serial = extractSerial(decodedText);
-
   const now = Date.now();
-
-
-  /* منع تكرار نفس QR بسرعة */
 
   if (processing) return;
 
@@ -247,38 +226,83 @@ async function onScanSuccess(decodedText) {
     return;
   }
 
-
   lastCode = serial;
   lastAt = now;
-
   processing = true;
-
 
   showMessage(
     "⏳ جاري تسجيل العملية...",
     "waiting"
   );
 
-
   try {
 
-    const response = await fetch(
-
-      API_URL,
-
-      {
-
-        method: "POST",
-
-        htry {
-
     const data = await sendScan(serial);
+
     if (data.ok) {
 
       const operation =
         data.action === "دخول"
         ? "🟢 دخول"
         : "🔴 خروج";
+
+      showMessage(
+
+        "<b>" + operation + "</b><br><br>" +
+
+        "👩‍🎓 " +
+        escapeHtml(data.student.name) +
+        "<br>" +
+
+        "🔢 الرقم: " +
+        escapeHtml(data.student.serial) +
+        "<br>" +
+
+        "🚌 الرحلة: " +
+        escapeHtml(data.student.trip) +
+        "<br>" +
+
+        "📅 التاريخ: " +
+        escapeHtml(data.date) +
+        "<br>" +
+
+        "🕐 الوقت: " +
+        escapeHtml(data.time),
+
+        "success"
+      );
+
+    } else {
+
+      showMessage(
+        "❌ " +
+        escapeHtml(
+          data.message ||
+          "تعذر تسجيل العملية"
+        ),
+        "error"
+      );
+    }
+
+  } catch (error) {
+
+    showMessage(
+      "❌ تعذر الاتصال بالسجل المركزي: " +
+      escapeHtml(error.message || error),
+      "error"
+    );
+
+  } finally {
+
+    setTimeout(function() {
+      processing = false;
+    }, 1200);
+
+  }
+}
+
+
+/* إرسال المسح إلى Apps Script */
 
 function sendScan(serial) {
 
@@ -319,7 +343,6 @@ function sendScan(serial) {
     window[callbackName] = function(data) {
 
       cleanup();
-
       resolve(data);
 
     };
@@ -350,74 +373,6 @@ function sendScan(serial) {
     document.body.appendChild(script);
 
   });
-
-}
-      showMessage(
-
-        "<b>" +
-        operation +
-        "</b><br><br>" +
-
-        "👩‍🎓 " +
-        escapeHtml(data.student.name) +
-        "<br>" +
-
-        "🔢 الرقم: " +
-        escapeHtml(data.student.serial) +
-        "<br>" +
-
-        "🚌 الرحلة: " +
-        escapeHtml(data.student.trip) +
-        "<br>" +
-
-        "📅 التاريخ: " +
-        escapeHtml(data.date) +
-        "<br>" +
-
-        "🕐 الوقت: " +
-        escapeHtml(data.time),
-
-        "success"
-
-      );
-
-    }
-
-    else {
-
-      showMessage(
-        "❌ " +
-        escapeHtml(
-          data.message ||
-          "تعذر تسجيل العملية"
-        ),
-        "error"
-      );
-
-    }
-
-  }
-
-  catch (error) {
-
-    showMessage(
-      "❌ تعذر الاتصال بالسجل المركزي: " +
-      escapeHtml(error),
-      "error"
-    );
-
-  }
-
-  finally {
-
-    setTimeout(function() {
-
-      processing = false;
-
-    }, 1200);
-
-  }
-
 }
 
 
@@ -441,31 +396,20 @@ function showMessage(message, type) {
 function escapeHtml(value) {
 
   return String(value ?? "")
-
     .replace(
-
       /[&<>"']/g,
-
       function(character) {
 
         return {
-
           "&": "&amp;",
-
           "<": "&lt;",
-
           ">": "&gt;",
-
           '"': "&quot;",
-
           "'": "&#039;"
-
         }[character];
 
       }
-
     );
-
 }
 
 </script>
