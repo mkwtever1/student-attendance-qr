@@ -229,8 +229,7 @@ async function onScanSuccess(decodedText) {
 lastCode = serial;
 lastAt = now;
 
-  lastCode = serial;
-  lastAt = now;
+  
   processing = true;
 
   showMessage(
@@ -297,9 +296,10 @@ lastAt = now;
 
   } finally {
 
-    setTimeout(function() {
-      processing = false;
-    }, 1200);
+   setTimeout(function() {
+  processing = false;
+  lastCode = "";
+}, 3000);
 
   }
 }
