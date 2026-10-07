@@ -312,7 +312,8 @@ function sendScan(serial) {
   return new Promise(function(resolve, reject) {
 
     const callbackName =
-      "qrCallback_" + Date.now();
+  "qrCallback_" + Date.now() + "_" +
+  Math.floor(Math.random() * 100000);
 
     const script =
       document.createElement("script");
