@@ -159,7 +159,7 @@ async function startCamera() {
     );
 
     cameraRunning = true;
-
+warmUpConnection();
     showMessage(
       "📷 الكاميرا تعمل — وجهي QR داخل المربع.",
       "waiting"
@@ -174,7 +174,29 @@ async function startCamera() {
 
   }
 }
+function warmUpConnection() {
+  const script = document.createElement("script");
+  const callbackName = "warmup_" + Date.now();
 
+  window[callbackName] = function() {
+    delete window[callbackName];
+    script.remove();
+  };
+
+  script.src =
+    API_URL +
+    "?action=scan" +
+    "&serial=__WARMUP__" +
+    "&callback=" + callbackName +
+    "&t=" + Date.now();
+
+  script.onerror = function() {
+    delete window[callbackName];
+    script.remove();
+  };
+
+  document.body.appendChild(script);
+}
 
 /* إيقاف الكاميرا */
 
